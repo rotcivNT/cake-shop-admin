@@ -34,4 +34,5 @@ export interface CakeProduct {
   updatedAt: string;
   galleries: Gallery[];
   productVariants: ProductVariant[];
+  stop: boolean;
 }

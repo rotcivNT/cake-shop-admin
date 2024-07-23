@@ -4,7 +4,7 @@ import ProductForm from "@/components/products/ProductForm";
 function ProductListPage() {
   return (
     <DefaultLayout>
-      <ProductForm />
+      <ProductForm productId={""} />
     </DefaultLayout>
   );
 }

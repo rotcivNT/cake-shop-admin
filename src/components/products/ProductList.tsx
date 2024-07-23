@@ -1,15 +1,23 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 "use client";
-import { getAllProduct } from "@/services/product";
+import { getAllProduct, updateProductStatus } from "@/services/product";
 import { useCakeStore } from "@/store/CakeStore";
 import { CakeProduct } from "@/types/CakeProduct";
 import { formatNumberToVND } from "@/utils/formatNumberToVND";
-import { Edit, Trash2 } from "lucide-react";
+import { Edit, Eye, EyeOff, Trash2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 import useSWR from "swr";
+import FilterCategorySelect from "../SelectGroup/FilterCategorySelect";
+import Search from "../search/Search";
 import { Button } from "../ui/button";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+} from "../ui/pagination";
 
 export interface ProductListProps {
   product: CakeProduct;
@@ -24,11 +32,57 @@ const ProductList = () => {
     productData: state.productData,
     setProductData: state.setProductData,
   }));
+  const [selectedCateId, setSelectedCateId] = useState<string>("");
+  const [isLastPage, setIsLastPage] = useState(false);
+  const query = useSearchParams();
+  const page = query.get("page") || 0;
+  const q = query.get("q") || "";
   const {
     data: res,
     isLoading,
     error,
-  } = useSWR("get-all-product", getAllProduct);
+  } = useSWR(
+    [`?page=${+page}&size=10&q=${q}`, selectedCateId],
+    ([url, selectedCateId]) => getAllProduct(url, selectedCateId),
+  );
+  const { data: nextPage } = useSWR(
+    [`?page=${+page + 1}&size=10&q=${q}`, selectedCateId],
+    ([url, selectedCateId]) => getAllProduct(url, selectedCateId),
+  );
+  const searchParams = useSearchParams();
+
+  const createQueryString = useCallback(
+    (name: string, value: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set(name, value);
+
+      return params.toString();
+    },
+    [searchParams],
+  );
+  const toggleHidden = async (id: string, isStop: boolean) => {
+    try {
+      const res = await updateProductStatus(id, isStop);
+      if (res.statusCode === "200") {
+        const newData = productData.map((item) => {
+          if (item.product.id === id) {
+            return {
+              ...item,
+              product: {
+                ...item.product,
+                stop: isStop,
+              },
+            };
+          }
+          return item;
+        });
+        setProductData(newData);
+        console.log("xong");
+      }
+    } catch (e) {
+      console.log(e);
+    }
+  };
   useEffect(() => {
     if (!isLoading && !error && res) {
       if (res?.code === 1) {
@@ -36,29 +90,42 @@ const ProductList = () => {
       }
     }
   }, [res, isLoading, error]);
+  useEffect(() => {
+    if (nextPage && nextPage.code === 1 && nextPage.data.length === 0) {
+      setIsLastPage(true);
+    } else {
+      setIsLastPage(false);
+    }
+  }, [nextPage]);
+
   return (
     <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
       <div className="flex items-center justify-between px-4 py-6 md:px-6 xl:px-7.5">
         <h4 className="text-xl font-semibold text-black dark:text-white">
-          All Products
+          Sản phẩm
         </h4>
         <Button>
-          <Link href="/product/create">Create Product</Link>
+          <Link href="/product/create">Thêm sản phẩm</Link>
         </Button>
       </div>
-
+      <div>
+        <Search />
+      </div>
+      <div className="mb-6 ">
+        <FilterCategorySelect setSelectedCateId={setSelectedCateId} />
+      </div>
       <div className="grid grid-cols-6 border-t border-stroke px-4 py-4.5 dark:border-strokedark sm:grid-cols-8 md:px-6 2xl:px-7.5">
         <div className="col-span-3 flex items-center">
-          <p className="font-medium">Product Name</p>
+          <p className="font-medium">Tên sản phẩm</p>
         </div>
         <div className="col-span-1  hidden items-center sm:col-span-2 sm:flex">
-          <p className="font-medium">Category</p>
+          <p className="font-medium">Danh mục</p>
         </div>
         <div className="col-span-1 flex items-center sm:col-span-2">
-          <p className="font-medium">Size - Price</p>
+          <p className="font-medium">Size - Giá</p>
         </div>
         <div className="col-span-2 flex items-center justify-end  sm:col-span-1">
-          <p className="font-medium">Action</p>
+          <p className="font-medium">Hành động</p>
         </div>
       </div>
 
@@ -100,8 +167,13 @@ const ProductList = () => {
               ))}
             </div>
             <div className="col-span-2 flex items-center justify-end space-x-3.5 sm:col-span-1">
-              <button className="hover:text-primary">
-                <Trash2 size={18} />
+              <button
+                onClick={() =>
+                  toggleHidden(data.product.id, !data.product.stop)
+                }
+                className="hover:text-primary"
+              >
+                {data.product.stop ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
               <Link
                 href={{
@@ -115,6 +187,37 @@ const ProductList = () => {
             </div>
           </div>
         ))}
+      <Pagination className="pb-10">
+        <PaginationContent>
+          {+page !== 0 && (
+            <PaginationItem>
+              <Button className="p-0">
+                <Link
+                  className="block px-4 py-2"
+                  href={"?" + createQueryString("page", `${+page - 1}`)}
+                >
+                  Trang trước
+                </Link>
+              </Button>
+            </PaginationItem>
+          )}
+          <PaginationItem className="mx-4 font-bold">
+            {+page + 1}
+          </PaginationItem>
+          {!isLastPage && (
+            <PaginationItem>
+              <Button className="p-0">
+                <Link
+                  className="block px-4 py-2"
+                  href={"?" + createQueryString("page", `${+page + 1}`)}
+                >
+                  Trang tiếp
+                </Link>
+              </Button>
+            </PaginationItem>
+          )}
+        </PaginationContent>
+      </Pagination>
     </div>
   );
 };
