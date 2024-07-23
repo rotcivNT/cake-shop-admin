@@ -17,6 +17,7 @@ import useSWR from "swr";
 import { Button } from "../ui/button";
 import Link from "next/link";
 import OrderStatusSelect from "../SelectGroup/OrderStatusSelect";
+import { OrderDetailLoading } from "./OrderDetailLoading";
 
 export default function OrderDetail() {
   const { id } = useParams();
@@ -69,7 +70,10 @@ export default function OrderDetail() {
         </div>
       </div>
 
-      {orders &&
+      {isLoading ? (
+        <OrderDetailLoading />
+      ) : (
+        orders &&
         orders.map((order) => (
           <>
             {order.orderDetailsFull.map(
@@ -152,7 +156,8 @@ export default function OrderDetail() {
               </p>
             </div>
           </>
-        ))}
+        ))
+      )}
     </div>
   );
 }
