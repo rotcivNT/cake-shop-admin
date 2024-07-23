@@ -18,6 +18,7 @@ import {
   PaginationContent,
   PaginationItem,
 } from "../ui/pagination";
+import ProductListLoading from "./ProductListLoading";
 
 export interface ProductListProps {
   product: CakeProduct;
@@ -77,7 +78,6 @@ const ProductList = () => {
           return item;
         });
         setProductData(newData);
-        console.log("xong");
       }
     } catch (e) {
       console.log(e);
@@ -129,7 +129,10 @@ const ProductList = () => {
         </div>
       </div>
 
-      {productData &&
+      {isLoading ? (
+        <ProductListLoading />
+      ) : (
+        productData &&
         productData.map((data, key) => (
           <div
             className="grid grid-cols-6 border-t border-stroke px-4 py-4.5 dark:border-strokedark sm:grid-cols-8 md:px-6 2xl:px-7.5"
@@ -186,7 +189,8 @@ const ProductList = () => {
               </Link>
             </div>
           </div>
-        ))}
+        ))
+      )}
       <Pagination className="pb-10">
         <PaginationContent>
           {+page !== 0 && (
