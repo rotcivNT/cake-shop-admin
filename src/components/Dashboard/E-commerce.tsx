@@ -1,5 +1,6 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 "use client";
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import ChartOne from "../Charts/ChartOne";
 import ChartThree from "../Charts/ChartThree";
 import ChartTwo from "../Charts/ChartTwo";
@@ -7,12 +8,150 @@ import ChatCard from "../Chat/ChatCard";
 import TableOne from "../Tables/TableOne";
 import CardDataStats from "../CardDataStats";
 import MapOne from "../Maps/MapOne";
+import useSWR from "swr";
+import { getAllOrders, getStatistics } from "@/services/orders";
+import { useCakeStore } from "@/store/CakeStore";
+import { formatNumberToVND } from "@/utils/formatNumberToVND";
+import { Order } from "@/types/order";
+
+const typeStatic = {
+  daily: {
+    current: "today",
+    previous: "yesterday",
+  },
+  weekly: {
+    current: "thisWeek",
+    previous: "lastWeek",
+  },
+  monthly: {
+    current: "thisMonth",
+    previous: "lastMonth",
+  },
+};
+
+type StatisticData = {
+  revenue: number;
+  productSold: number;
+  userCountBuy: number;
+  orderCount: number;
+};
 
 const ECommerce: React.FC = () => {
+  const [type, setType] = useState<string>("daily");
+  const { data, isLoading } = useSWR(type, getStatistics);
+  const [currentOrders, setCurrentOrders] = useState<Order[]>([]);
+  const [previousOrders, setPreviousOrders] = useState<Order[]>([]);
+  const [currentData, setCurrentData] = useState<StatisticData>({
+    orderCount: 0,
+    productSold: 0,
+    userCountBuy: 0,
+    revenue: 0,
+  });
+  const [previousData, setPreviousData] = useState<StatisticData>({
+    orderCount: 0,
+    productSold: 0,
+    userCountBuy: 0,
+    revenue: 0,
+  });
+  useEffect(() => {
+    if (currentOrders.length > 0) {
+      const userCountBy: { [key: string]: number } = {};
+      const totalRevenue = currentOrders.reduce((sum, order) => {
+        if (!userCountBy[order.userId as string]) {
+          userCountBy[order.userId as string] = 1;
+        }
+        return sum + order.total;
+      }, 0);
+
+      const totalProductSold = currentOrders.reduce((sum, order) => {
+        const productInOD = order.orderDetails
+          ? order.orderDetails.reduce((sumOD, item) => {
+              return sumOD + item.quantity;
+            }, 0)
+          : 0;
+        return sum + productInOD;
+      }, 0);
+
+      const totalUser = Object.values(userCountBy).reduce(
+        (total, num) => total + num,
+        0,
+      );
+
+      setCurrentData({
+        revenue: totalRevenue,
+        productSold: totalProductSold,
+        userCountBuy: totalUser,
+        orderCount: currentOrders.length,
+      });
+    }
+
+    if (previousOrders.length > 0) {
+      const userCountByPrevious: { [key: string]: number } = {};
+      const totalRevenue = previousOrders.reduce((sum, order) => {
+        if (!userCountByPrevious[order.userId as string]) {
+          userCountByPrevious[order.userId as string] = 1;
+        }
+        return sum + order.total;
+      }, 0);
+      const totalProductSold = currentOrders.reduce((sum, order) => {
+        const productInOD = order.orderDetails
+          ? order.orderDetails.reduce((sumOD, item) => {
+              return sumOD + item.quantity;
+            }, 0)
+          : 0;
+        return sum + productInOD;
+      }, 0);
+
+      const totalUser = Object.values(userCountByPrevious).reduce(
+        (total, num) => total + num,
+        0,
+      );
+      setPreviousData({
+        revenue: totalRevenue,
+        productSold: totalProductSold,
+        userCountBuy: totalUser,
+        orderCount: previousOrders.length,
+      });
+    }
+  }, [currentOrders, previousOrders]);
+
+  useEffect(() => {
+    if (data && data.data) {
+      const t = typeStatic[type as keyof typeof typeStatic];
+      setCurrentOrders(data.data[t.current]);
+      setPreviousOrders(data.data[t.previous]);
+    }
+  }, [data]);
+  const handlePercent = (current: number, previous: number) => {
+    if (previous === 0) {
+      return "100%";
+    }
+    if (current / previous > 1) {
+      return `${((current / previous) * 100).toFixed(2)}%`;
+    }
+    return `${((1 - current / previous) * 100).toFixed(2)}%`;
+  };
+  const isLevelUp = (current: number, previous: number) => {
+    if (previous === 0 || previous === current) {
+      return true;
+    }
+    if (current / previous > 1) {
+      return true;
+    }
+    return false;
+  };
+
   return (
     <>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 xl:grid-cols-4 2xl:gap-7.5">
-        <CardDataStats title="Total views" total="$3.456K" rate="0.43%" levelUp>
+        <CardDataStats
+          title="Hóa đơn"
+          total={currentData?.orderCount + ""}
+          rate={handlePercent(currentData.orderCount, previousData.orderCount)}
+          {...(isLevelUp(currentData.orderCount, previousData.orderCount)
+            ? { levelUp: true }
+            : { levelDown: true })}
+        >
           <svg
             className="fill-primary dark:fill-white"
             width="22"
@@ -31,7 +170,14 @@ const ECommerce: React.FC = () => {
             />
           </svg>
         </CardDataStats>
-        <CardDataStats title="Total Profit" total="$45,2K" rate="4.35%" levelUp>
+        <CardDataStats
+          title="Doanh thu"
+          total={formatNumberToVND(currentData.revenue)}
+          rate={handlePercent(currentData.revenue, previousData.revenue)}
+          {...(isLevelUp(currentData.revenue, previousData.revenue)
+            ? { levelUp: true }
+            : { levelDown: true })}
+        >
           <svg
             className="fill-primary dark:fill-white"
             width="20"
@@ -54,7 +200,17 @@ const ECommerce: React.FC = () => {
             />
           </svg>
         </CardDataStats>
-        <CardDataStats title="Total Product" total="2.450" rate="2.59%" levelUp>
+        <CardDataStats
+          title="Sản phẩm đã bán"
+          total={currentData.productSold + ""}
+          rate={handlePercent(
+            currentData.productSold,
+            previousData.productSold,
+          )}
+          {...(isLevelUp(currentData.productSold, previousData.productSold)
+            ? { levelUp: true }
+            : { levelDown: true })}
+        >
           <svg
             className="fill-primary dark:fill-white"
             width="22"
@@ -73,7 +229,17 @@ const ECommerce: React.FC = () => {
             />
           </svg>
         </CardDataStats>
-        <CardDataStats title="Total Users" total="3.456" rate="0.95%" levelDown>
+        <CardDataStats
+          title="Khách hàng"
+          total={currentData.userCountBuy + ""}
+          rate={handlePercent(
+            currentData.userCountBuy,
+            previousData.userCountBuy,
+          )}
+          {...(isLevelUp(currentData.userCountBuy, previousData.userCountBuy)
+            ? { levelUp: true }
+            : { levelDown: true })}
+        >
           <svg
             className="fill-primary dark:fill-white"
             width="22"
@@ -101,12 +267,6 @@ const ECommerce: React.FC = () => {
       <div className="mt-4 grid grid-cols-12 gap-4 md:mt-6 md:gap-6 2xl:mt-7.5 2xl:gap-7.5">
         <ChartOne />
         <ChartTwo />
-        <ChartThree />
-        <MapOne />
-        <div className="col-span-12 xl:col-span-8">
-          <TableOne />
-        </div>
-        <ChatCard />
       </div>
     </>
   );

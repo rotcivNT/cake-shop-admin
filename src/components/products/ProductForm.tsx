@@ -1,9 +1,10 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 "use client";
 import { uploadFile } from "@/services";
 import {
   createNewProduct,
   getAllVariants,
-  updateProduct
+  updateProduct,
 } from "@/services/product";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -14,6 +15,7 @@ import CategorySelect from "../SelectGroup/CategorySelect";
 import SizeSelect from "../SelectGroup/SizeSelect";
 import { Button } from "../ui/button";
 import FileUpload from "./FileUpload";
+import { Loader2 } from "lucide-react";
 
 export interface IFormInput {
   name: string;
@@ -72,6 +74,8 @@ function ProductForm({
         }
         fileUrl = await uploadFile(formData);
       }
+      console.log(fileUrl);
+
       const payload = isEdit
         ? {
             id: productId,
@@ -117,7 +121,7 @@ function ProductForm({
     setPrice((pre) => pre.filter((item) => item.variantId !== variantId));
   };
   useEffect(() => {
-    if (!isLoading && !error && allVariants) {
+    if (allVariants) {
       setVariants(
         allVariants.data.map((item: any) => ({
           value: item.id,
@@ -126,7 +130,7 @@ function ProductForm({
         })),
       );
     }
-  }, [variantSelection, allVariants, isLoading, error]);
+  }, [allVariants]);
 
   return (
     <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
@@ -134,7 +138,9 @@ function ProductForm({
         <Button>
           <Link href="/product">Quay lại</Link>
         </Button>
-        <h3 className="font-medium text-black dark:text-white">Product Form</h3>
+        <h3 className="font-medium text-black dark:text-white">
+          Thêm sản phẩm
+        </h3>
       </div>
       <form onSubmit={handleSubmit(onSubmit)}>
         <div className="p-6.5">
@@ -211,7 +217,13 @@ function ProductForm({
           )}
 
           <button className="flex w-full justify-center rounded bg-primary p-3 font-medium text-gray hover:bg-opacity-90">
-            {isEdit ? "Save" : "Create"}
+            {isPending ? (
+              <Loader2 className="animate-spin" />
+            ) : isEdit ? (
+              "Save"
+            ) : (
+              "Create"
+            )}
           </button>
         </div>
       </form>

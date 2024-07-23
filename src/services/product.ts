@@ -18,10 +18,17 @@ export const createNewProduct = async (payload: any) => {
   }
 };
 
-export const getAllProduct = async () => {
+export const getAllProduct = async (url: string, categoryId?: string) => {
   try {
-    const response = await fetch(`${baseURL}/get-all-products`);
+    const response = await fetch(`${baseURL}/get-all-products${url}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ categoryId }),
+    });
     const data = await response.json();
+
     return {
       code: 1,
       data,
@@ -61,6 +68,19 @@ export const updateProduct = async (payload: any) => {
       },
       body: JSON.stringify(payload),
     });
+    const data = await response.json();
+    return data;
+  } catch (e) {
+    console.log(e);
+    return e;
+  }
+};
+
+export const updateProductStatus = async (id: string, isStop: boolean) => {
+  try {
+    const response = await fetch(
+      `${baseURL}/update-status-product/${id}?isStop=${isStop}`,
+    );
     const data = await response.json();
     return data;
   } catch (e) {
