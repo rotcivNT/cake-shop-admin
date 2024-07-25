@@ -7,7 +7,7 @@ import { formatNumberToVND } from "@/utils/formatNumberToVND";
 import { Edit, Eye, EyeOff, Trash2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import useSWR from "swr";
 import FilterCategorySelect from "../SelectGroup/FilterCategorySelect";
@@ -35,9 +35,10 @@ const ProductList = () => {
   }));
   const [selectedCateId, setSelectedCateId] = useState<string>("");
   const [isLastPage, setIsLastPage] = useState(false);
-  const query = useSearchParams();
-  const page = query.get("page") || 0;
-  const q = query.get("q") || "";
+  const searchParams = useSearchParams();
+  const page = searchParams.get("page") || 0;
+  const q = searchParams.get("q") || "";
+  const router = useRouter();
   const {
     data: res,
     isLoading,
@@ -50,7 +51,6 @@ const ProductList = () => {
     [`?page=${+page + 1}&size=10&q=${q}`, selectedCateId],
     ([url, selectedCateId]) => getAllProduct(url, selectedCateId),
   );
-  const searchParams = useSearchParams();
 
   const createQueryString = useCallback(
     (name: string, value: string) => {
@@ -83,6 +83,9 @@ const ProductList = () => {
       console.log(e);
     }
   };
+  useEffect(() => {
+    router.push("/product");
+  }, [selectedCateId]);
   useEffect(() => {
     if (!isLoading && !error && res) {
       if (res?.code === 1) {

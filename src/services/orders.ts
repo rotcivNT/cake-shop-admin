@@ -8,6 +8,7 @@ export const getAllOrders = async (orderId?: string) => {
   try {
     const res = await fetch(`${baseURL}/get-orders/${orderId ? orderId : ""}`);
     const data: Order[] = await res.json();
+
     if (res.ok) {
       return {
         code: 1,
