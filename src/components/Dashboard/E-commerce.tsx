@@ -64,12 +64,7 @@ const ECommerce: React.FC = () => {
       }, 0);
 
       const totalProductSold = currentOrders.reduce((sum, order) => {
-        const productInOD = order.orderDetails
-          ? order.orderDetails.reduce((sumOD, item) => {
-              return sumOD + item.quantity;
-            }, 0)
-          : 0;
-        return sum + productInOD;
+        return sum + (order.orderDetails?.length || 0);
       }, 0);
 
       const totalUser = Object.values(userCountBy).reduce(
@@ -93,19 +88,15 @@ const ECommerce: React.FC = () => {
         }
         return sum + order.total;
       }, 0);
-      const totalProductSold = currentOrders.reduce((sum, order) => {
-        const productInOD = order.orderDetails
-          ? order.orderDetails.reduce((sumOD, item) => {
-              return sumOD + item.quantity;
-            }, 0)
-          : 0;
-        return sum + productInOD;
+      const totalProductSold = previousOrders.reduce((sum, order) => {
+        return sum + (order.orderDetails?.length || 0);
       }, 0);
 
       const totalUser = Object.values(userCountByPrevious).reduce(
         (total, num) => total + num,
         0,
       );
+
       setPreviousData({
         revenue: totalRevenue,
         productSold: totalProductSold,
@@ -114,6 +105,7 @@ const ECommerce: React.FC = () => {
       });
     }
   }, [currentOrders, previousOrders]);
+  console.log(previousData);
 
   useEffect(() => {
     if (data && data.data) {

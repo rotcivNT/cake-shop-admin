@@ -10,11 +10,17 @@ import {
 import { formatDateTime } from "@/utils/formatDate";
 import { formatNumberToVND } from "@/utils/formatNumberToVND";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import useSWR from "swr";
 import OrderStatusFilterSelect from "../SelectGroup/OrderStatusFilterSelect";
 import Search from "../search/Search";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+} from "../ui/pagination";
+import { Button } from "../ui/button";
 const SkeletonRow = () => (
   <tr className="animate-pulse">
     <td className="px-4 py-4 xl:pl-11">
@@ -38,16 +44,18 @@ export default function OrderList() {
   const [filterProps, setFilterProps] = useState<FilterOrderProps>(
     {} as FilterOrderProps,
   );
-  const query = useSearchParams();
-  const q = query.get("q") || "";
+  const searchParams = useSearchParams();
+  const page = searchParams.get("page") || 0;
+  const q = searchParams.get("q") || "";
+  const router = useRouter();
+  const [isLastPage, setIsLastPage] = useState(false);
   const { data: orders, isLoading } = useSWR(
-    [`/filter-order?page=0&size=10&q=${q}`, filterProps],
+    [`/filter-order?page=${page}&size=10&q=${q}`, filterProps],
     ([url, filterProps]) => filterOrders(url, filterProps),
-    {
-      revalidateIfStale: true,
-      revalidateOnFocus: true,
-      revalidateOnMount: true,
-    },
+  );
+  const { data: nextPage } = useSWR(
+    [`/filter-order?page=${+page + 1}&size=10&q=${q}`, filterProps],
+    ([url, filterProps]) => filterOrders(url, filterProps),
   );
   const handleSetFilterProps = <T extends keyof FilterOrderProps>(
     key: T,
@@ -56,6 +64,27 @@ export default function OrderList() {
     setFilterProps((prev) => ({ ...prev, [key]: value }));
   };
 
+  const createQueryString = useCallback(
+    (name: string, value: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set(name, value);
+
+      return params.toString();
+    },
+    [searchParams],
+  );
+
+  useEffect(() => {
+    router.push("/orders");
+  }, [filterProps]);
+
+  useEffect(() => {
+    if (nextPage && nextPage.code === 1 && nextPage.data.length === 0) {
+      setIsLastPage(true);
+    } else {
+      setIsLastPage(false);
+    }
+  }, [nextPage]);
   return (
     <div className="rounded-sm border border-stroke bg-white pb-2.5 pt-6 shadow-default dark:border-strokedark dark:bg-boxdark  xl:pb-1">
       <div className="flex items-center justify-between p-6">
@@ -170,6 +199,37 @@ export default function OrderList() {
           <p className="py-10 text-center">Không tìm thấy hóa đơn</p>
         )}
       </div>
+      <Pagination className="py-10">
+        <PaginationContent>
+          {+page !== 0 && (
+            <PaginationItem>
+              <Button className="p-0">
+                <Link
+                  className="block px-4 py-2"
+                  href={"?" + createQueryString("page", `${+page - 1}`)}
+                >
+                  Trang trước
+                </Link>
+              </Button>
+            </PaginationItem>
+          )}
+          <PaginationItem className="mx-4 font-bold">
+            {+page + 1}
+          </PaginationItem>
+          {!isLastPage && (
+            <PaginationItem>
+              <Button className="p-0">
+                <Link
+                  className="block px-4 py-2"
+                  href={"?" + createQueryString("page", `${+page + 1}`)}
+                >
+                  Trang tiếp
+                </Link>
+              </Button>
+            </PaginationItem>
+          )}
+        </PaginationContent>
+      </Pagination>
     </div>
   );
 }

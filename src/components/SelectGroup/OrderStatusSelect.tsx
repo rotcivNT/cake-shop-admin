@@ -2,7 +2,7 @@
 import { FilterOrderProps, OrderStatus } from "@/types/order";
 import React, { useState, useTransition } from "react";
 import { Button } from "../ui/button";
-import { updateOrderStatus } from "@/services/orders";
+import { filterOrders, updateOrderStatus } from "@/services/orders";
 import { Loader2 } from "lucide-react";
 import "react-toastify/dist/ReactToastify.css";
 import { Bounce, toast, ToastContainer } from "react-toastify";
@@ -29,12 +29,20 @@ const OrderStatusSelect = ({ defaultValue, orderId }: IProps) => {
         const res = await updateOrderStatus(orderId, selectedOption);
         if (res?.code === 1) {
           mutate(
-            ["/filter-order?page=0&size=10", {} as FilterOrderProps],
-            undefined,
-            {
-              revalidate: true,
+            ["/filter-order?page=0&size=10&q=", {} as FilterOrderProps],
+            async () => {
+              try {
+                const updatedOrders = await filterOrders(
+                  "/filter-order?page=0&size=10",
+                );
+
+                if (updatedOrders?.data) return updatedOrders.data;
+              } catch (e) {
+                console.log(e);
+              }
             },
           );
+          mutate(orderId);
         }
 
         if (res?.code === 1) {
