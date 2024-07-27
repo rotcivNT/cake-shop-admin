@@ -1,4 +1,4 @@
-"use server";
+// "use server";
 const baseURL = process.env.NEXT_PUBLIC_PRODUCT_BACK_END_URL;
 
 export const createNewProduct = async (payload: any) => {
